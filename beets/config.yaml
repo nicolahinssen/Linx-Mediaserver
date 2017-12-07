@@ -1,0 +1,86 @@
+library: library.db 
+directory: /mnt/nfs/media/Music 
+
+plugins: [
+    beatport,
+    embyupdate,
+    discogs,
+    fetchart,
+    embedart,
+    zero,
+    info,
+    edit,
+    ftintitle,
+    inline,
+    scrub,
+    replaygain ] 
+
+import:
+    write: yes
+    copy: no
+    move: yes
+    delete: no
+    resume: yes
+    incremental: no
+    quiet_fallback: asis
+    none_rec_action: asis
+    timid: no
+    log: beets.log
+    autotag: yes
+    default_action: apply
+    group_albums: no
+    duplicate_action: remove
+        
+va_name: 'Various Artists'
+        
+replace:
+    '[\\/]': _
+    '^\.': _
+    '[\x00-\x1f]': _
+    '[<>:"\?\*\|]': _
+    '\.$': _
+    '\s+$': ''
+    '^\s+': ''
+    '^-': _
+        
+replaygain:
+    auto: no
+    backend: gstreamer
+    overwrite: no
+
+emby:
+    host: 192.168.178.13
+    port: 8096
+    username: Nicola
+    apikey: 9c3cc29050be4313a67b13ab253b88a0
+
+zero:
+    fields: bpm disc disctotal track tracktotal original_year comments
+    bpm: '^0$'
+    disc: '^0$'
+    disctotal: '^0$'
+    track: '^0$'
+    tracktotal: '^0$'
+    original_year: '^0$'
+    update_database: true
+    
+musicbrainz:
+    searchlimit: 5 
+
+paths:
+    default: $albumartist/$album%aunique{}/$track $title
+    singleton: Non-Album/$artist/$title
+    comp: Compilations/$album%aunique{}/$track $title
+    albumartist::^(v|V)\W*(a|A)\W*($|rious\W*(a|A)rtists): Compilations/$album%aunique{}/$track $title 
+
+fetchart:
+    sources: filesystem fanarttv coverart itunes amazon albumart
+    fanarttv_key: fdfdf68bdffd5950d6723e999cfbed66 
+
+match:
+    strong_rec_thresh: 0.18
+    medium_rec_thresh: 0.30
+    required: artist
+    
+ui:
+    color: no
