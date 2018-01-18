@@ -6,9 +6,6 @@ exec > >(tee -a $logfile)
 exec 2> >(tee -a $masterlog)
 
 echo "$(date '+%d/%m/%y %H:%M:%S') | Sonarr   | STARTING Post-processing $sonarr_episodefile_scenename" >> "$masterlog"
-
-echo "#######################################################################################"
-echo ""
 echo "$(date '+%d/%m/%y %H:%M:%S') | Post-processing $sonarr_episodefile_scenename"
 
 export sonarr_eventtype="$sonarr_eventtype"
@@ -43,7 +40,6 @@ echo "Removing torrent from rTorrent"
 xmlrpc 192.168.178.13:9080/RPC2 d.erase $sonarr_download_id
 
 echo "Running script"
-python /srv/scripts/sickbeard_mp4_automator/postsonarr.py
+python /srv/scripts/sickbeard_mp4_automator/postSonarr.py
 
 echo "$(date '+%d/%m/%y %H:%M:%S') | Sonarr   | COMPLETED Post-processing $sonarr_episodefile_scenename" >> "$masterlog"
-

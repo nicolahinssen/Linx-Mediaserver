@@ -1,6 +1,5 @@
 #!/bin/bash
 
-savefile="/config/rtorrent/vars.txt"
 logfile="/config/rtorrent/log/rtorrent-postprocess.log"
 exec > >(tee -a $logfile)
 exec 2>&1
@@ -10,41 +9,40 @@ flock 200
 
 echo "$(date '+%d/%m/%y %H:%M:%S') | rtorrent-postprocess"
 
+SAVEFILE=/config/rtorrent/vars.txt
+
 cd "$1"
 
 if find ./*/ -type d 2>/dev/null; then
   echo "Multiple folders detected."
   for d in */; do
-    echo "base_path="\""$1/$d\"" > $savefile
-    echo "name="\""$d\"" >> $savefile
-    echo "custom1="\""$3\"" >> $savefile
+    echo "base_path="\""$1/$d\"" > $SAVEFILE
+    echo "name="\""$d\"" >> $SAVEFILE
+    echo "custom1="\""$3\"" >> $SAVEFILE
 
-    sed -i 's:/data/:/mnt/nfs/rtorrent/data/:g' $savefile
+    sed -i 's:/data/:/srv/rtorrent/data/:g' $SAVEFILE
+    sed -i 's:%20: :g;s:%2F:/:g;s:%26:&:g' $SAVEFILE
 
     echo "Directory: $d"
-    cat $savefile
+    cat $SAVEFILE
 
     if [[ $1 == *"/data/HardBay"* ]] || [[ $1 == *"/data/Redacted"* ]]; then
-      ssh nicola@192.168.178.32 /mnt/nfs/rtorrent/config/rtorrent/postprocess.sh
+      ssh nicola@192.168.178.13 /srv/rtorrent/config/rtorrent/music-postprocess.sh
     fi
-
-    echo "Command executed on remote machine."
   done
 else
-  echo "base_path="\""$1\"" > $savefile
-  echo "name="\""$2\"" >> $savefile
-  echo "custom1="\""$3\"" >> $savefile
+  echo "base_path="\""$1\"" > $SAVEFILE
+  echo "name="\""$2\"" >> $SAVEFILE
+  echo "custom1="\""$3\"" >> $SAVEFILE
   
-  sed -i 's:/data/:/mnt/nfs/rtorrent/data/:g' $savefile
-  # sed -i 's:%20: :g;s:%2F:/:g;s:%26:&:g'
+  sed -i 's:/data/:/srv/rtorrent/data/:g' $SAVEFILE
+  sed -i 's:%20: :g;s:%2F:/:g;s:%26:&:g' $SAVEFILE
 
-  cat $savefile
+  cat $SAVEFILE
 
   if [[ $1 == *"/data/HardBay"* ]] || [[ $1 == *"/data/Redacted"* ]]; then
-    ssh nicola@192.168.178.32 /mnt/nfs/rtorrent/config/rtorrent/postprocess.sh
+    ssh nicola@192.168.178.13 /srv/rtorrent/config/rtorrent/music-postprocess.sh
   fi
-
-  echo "Command executed on remote machine."
 fi
 
 ) 200>/config/rtorrent/postprocess.lock
