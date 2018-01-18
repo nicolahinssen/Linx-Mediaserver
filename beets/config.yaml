@@ -1,17 +1,19 @@
 library: library.db 
-directory: /mnt/nfs/media/Music 
+directory: /srv/media/Music
 
 plugins: [
     beatport,
     embyupdate,
+    chroma,
     discogs,
     fetchart,
     embedart,
     zero,
+    permissions,
     info,
     edit,
-    ftintitle,
     inline,
+    fromfilename,
     scrub,
     replaygain ] 
 
@@ -19,12 +21,12 @@ import:
     write: yes
     copy: no
     move: yes
-    delete: no
     resume: yes
     incremental: no
     quiet_fallback: asis
     none_rec_action: asis
     timid: no
+    detail: yes
     log: beets.log
     autotag: yes
     default_action: apply
@@ -32,7 +34,14 @@ import:
     duplicate_action: remove
         
 va_name: 'Various Artists'
-        
+asciify_paths: yes
+
+chroma:
+    auto: yes
+    
+acoustid:
+    apikey: XsoEays0uz
+
 replace:
     '[\\/]': _
     '^\.': _
@@ -42,45 +51,61 @@ replace:
     '\s+$': ''
     '^\s+': ''
     '^-': _
-        
+
 replaygain:
-    auto: no
+    auto: yes
     backend: gstreamer
     overwrite: no
+
+permissions:
+    file: 664
+    dir: 775
 
 emby:
     host: 192.168.178.13
     port: 8096
     username: Nicola
-    apikey: 9c3cc29050be4313a67b13ab253b88a0
+    apikey: af3ad32a5cbf4ea88d6e3e899a600097
 
 zero:
-    fields: bpm disc disctotal track tracktotal original_year comments
-    bpm: '^0$'
+    fields: disc disctotal track tracktotal original_year comments day month bpm
     disc: '^0$'
     disctotal: '^0$'
     track: '^0$'
     tracktotal: '^0$'
     original_year: '^0$'
+    day: '^00$'
+    month: '^00$'
+    bpm: '^0$'
     update_database: true
     
 musicbrainz:
     searchlimit: 5 
 
 paths:
-    default: $albumartist/$album%aunique{}/$track $title
+    comp: Various Artists/$album%aunique{}/%if{$multidisc,Disc $disc_nonpadded/}$track - $title
+    default: $albumartist/$album%aunique{}/%if{$multidisc,Disc $disc_nonpadded/}$track - $title
     singleton: Non-Album/$artist/$title
-    comp: Compilations/$album%aunique{}/$track $title
-    albumartist::^(v|V)\W*(a|A)\W*($|rious\W*(a|A)rtists): Compilations/$album%aunique{}/$track $title 
+
+item_fields:
+    multidisc: 1 if disctotal > 1 else 0
+    disc_nonpadded: disc
 
 fetchart:
-    sources: filesystem fanarttv coverart itunes amazon albumart
-    fanarttv_key: fdfdf68bdffd5950d6723e999cfbed66 
+    cover_names: cover front art album folder
+    minwidth: 300
+    enforce_ratio: 15px
+    sources: filesystem fanarttv coverart itunes amazon albumart wikipedia google
+    google_key: AIzaSyCUWgcRMPt7YIsOP-hh4EKyvxsxgdNx8N4
+    fanarttv_key: fdfdf68bdffd5950d6723e999cfbed66
+
+embedart:
+    maxwidth: 600
 
 match:
-    strong_rec_thresh: 0.18
-    medium_rec_thresh: 0.30
+    strong_rec_thresh: 0.15
+    medium_rec_thresh: 0.25
     required: artist
     
 ui:
-    color: no
+    color: yes
