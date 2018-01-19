@@ -1,5 +1,24 @@
 #!/bin/bash
 
+################################################################
+#                         DEPENDENCIES                         #      
+################################################################
+#                                                              #
+# bpmwrap.sh                                                   #
+#   https://github.com/meridius/bpmwrap/blob/master/bpmwrap.sh #
+#                                                              #
+# beets                                                        #
+#   https://github.com/beetbox/beets                           #
+#                                                              #
+# metaflac (from "flac" package)                               #
+#   https://github.com/xiph/flac                               #
+#                                                              #
+# mid3v2 (from "python-mutagen" package)                       #
+#   https://github.com/quodlibet/python-mutagen                #
+#                                                              #
+################################################################
+
+
 source /srv/rtorrent/config/rtorrent/vars.txt
 
 temppath="/srv/rtorrent/config/rtorrent/tmp"
@@ -191,9 +210,7 @@ if ls ./*.mp3 >/dev/null 2>&1; then
     ### Publisher ###
 
     if [[ -z "${mp3_tag[TPUB]}" ]]; then
-      if [[ ! "$NFO_PUBLISHER" =~ ^[Nn]$ ]]; then
-        mp3_tag[TPUB]="$NFO_PUBLISHER"
-      fi
+      mp3_tag[TPUB]="$NFO_PUBLISHER"
     fi
 
     if [[ -n "${mp3_tag[TPUB]}" ]]; then
@@ -260,6 +277,11 @@ if ls ./*.mp3 >/dev/null 2>&1; then
         /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -w -m 80 -x 320 "$i"
       fi
     fi
+
+    echo ""
+    echo "### NEW  TAGS ###"
+    echo ""
+    mid3v2 --list "$i"
 
     unset mp3_tag
     unset mp3_tag_TXXX
@@ -392,9 +414,7 @@ if ls ./*.flac >/dev/null 2>&1; then
     ### Publisher ###
 
     if [[ -z "${flac_tag[PUBLISHER]}" ]]; then
-      if [[ ! "$NFO_PUBLISHER" =~ ^[Nn]$ ]]; then
-        flac_tag[PUBLISHER]="$NFO_PUBLISHER"
-      fi
+      flac_tag[PUBLISHER]="$NFO_PUBLISHER"
     fi
 
     if [[ -n "${flac_tag[PUBLISHER]}" ]]; then
@@ -467,6 +487,11 @@ if ls ./*.flac >/dev/null 2>&1; then
       fi
     fi
 
+    echo ""
+    echo "### NEW  TAGS ###"
+    echo ""
+    metaflac --export-tags-to=- "$i"
+
     unset flac_tag
   done
 fi
@@ -481,15 +506,9 @@ fi
 
 rm -r "${temppath:?}/${name:?}"
 
-echo ""
-echo "## $name ##"
 echo "-------------------------------"
 echo "||   Processing completed!   ||"
 echo "-------------------------------"
-echo ""
-echo "### NEW  TAGS ###"
-exiftool "$i"
-
 
 echo "$(date '+%d/%m/%y %H:%M:%S') | $name" >> "$histfile"
 echo "$(date '+%d/%m/%y %H:%M:%S') | Music    | COMPLETED Processing $name" >> "$masterlog"
