@@ -1,7 +1,7 @@
 #!/bin/bash
 
 masterlog="/srv/linx.log"
-logfile="/srv/scripts/radarr/logfile.txt"
+logfile="/srv/scripts/log/radarr.log"
 exec > >(tee -a $logfile)
 exec 2> >(tee -a $masterlog)
 

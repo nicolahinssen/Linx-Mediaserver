@@ -1,7 +1,7 @@
 #!/bin/bash
 
 masterlog="/srv/linx.log"
-logfile="/srv/scripts/sonarr/logfile.txt"
+logfile="/srv/scripts/log/sonarr.log"
 exec > >(tee -a $logfile)
 exec 2> >(tee -a $masterlog)
 
