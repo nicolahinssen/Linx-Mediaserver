@@ -42,6 +42,7 @@ cd "$temppath/$name" || exit
 if ls ./*.nfo >/dev/null 2>&1; then
 
   sed -i 's; N/A;;g' ./*.nfo
+  sed -i 's/ None$//g' ./*.nfo
 
   ### Album ###
 
@@ -108,16 +109,16 @@ if ls ./*.mp3 >/dev/null 2>&1; then
 
     ### Track Number ###
 
-    MP3_FILENAME_TRACKNUMBER=$(echo "$i" | sed 's/-/_/g' | sed 's/^0//g' | cut -d_ -f1)
+    MP3_FILENAME_TRACKNUMBER=$(echo "$i" | sed 's;\./;;' | sed 's/-/_/g' | sed 's/^0//g' | cut -d_ -f1)
 
     ### Artist ###
 
-    filename_artist_tmp=$(echo "$i" | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f1)
+    filename_artist_tmp=$(echo "$i" | sed 's;\./;;' | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f1)
     MP3_FILENAME_ARTIST=$(echo "$filename_artist_tmp" | sed 's/_/ /g' | sed 's/^\([[:lower:]]\)/\u\1/g;s/(\([[:lower:]]\)/(\u\1/g;s/ \([[:lower:]]\)/ \u\1/g;s/Dj/DJ/g' | sed 's/\s+$//g')
 
     ### Title ###
 
-    filename_title_tmp=$(echo "$i" | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f2)
+    filename_title_tmp=$(echo "$i" | sed 's;\./;;' | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f2)
     MP3_FILENAME_TITLE=$(echo "$filename_title_tmp" | sed 's/_/ /g' | sed 's/^\([[:lower:]]\)/\u\1/g;s/(\([[:lower:]]\)/(\u\1/g;s/ \([[:lower:]]\)/ \u\1/g;s/Dj/DJ/g' | sed 's/\s+$//g;s/.mp3//')
 
 
@@ -308,16 +309,16 @@ if ls ./*.flac >/dev/null 2>&1; then
 
     ### Track Number ###
 
-    FLAC_FILENAME_TRACKNUMBER=$(echo "$i" | sed 's/-/_/g' | sed 's/^0//g' | cut -d_ -f1)
+    FLAC_FILENAME_TRACKNUMBER=$(echo "$i" | sed 's;\./;;' | sed 's/-/_/g' | sed 's/^0//g' | cut -d_ -f1)
 
     ### Artist ###
 
-    filename_artist_tmp=$(echo "$i" | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f1)
+    filename_artist_tmp=$(echo "$i" | sed 's;\./;;' | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f1)
     FLAC_FILENAME_ARTIST=$(echo "$filename_artist_tmp" | sed 's/_/ /g' | sed 's/^\([[:lower:]]\)/\u\1/g;s/(\([[:lower:]]\)/(\u\1/g;s/ \([[:lower:]]\)/ \u\1/g;s/Dj/DJ/g' | sed 's/\s+$//g')
 
     ### Title ###
 
-    filename_title_tmp=$(echo "$i" | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f2)
+    filename_title_tmp=$(echo "$i" | sed 's;\./;;' | sed 's/_-_/=/g' | sed 's/-/_/g' | sed 's/[[:digit:]]\+_//g' | cut -d= -f2)
     FLAC_FILENAME_TITLE=$(echo "$filename_title_tmp" | sed 's/_/ /g' | sed 's/^\([[:lower:]]\)/\u\1/g;s/(\([[:lower:]]\)/(\u\1/g;s/ \([[:lower:]]\)/ \u\1/g;s/Dj/DJ/g' | sed 's/\s+$//g;s/.flac//')
 
 
@@ -391,18 +392,18 @@ if ls ./*.flac >/dev/null 2>&1; then
 
     ### Disc Number ###
 
-    if [[ -n "${flac_tag[DISCNUMBER]}" ]]; then
-      flac_tag[DISCNUMBER]=$(echo "${flac_tag[DISCNUMBER]}" | sed 's/^0//')
+    if [[ -z "${flac_tag[DISCNUMBER]}" && -n "${flac_tag[DISC]}" ]]; then
+      flac_tag[DISCNUMBER]=$(echo "${flac_tag[DISC]}" | sed 's;^0;;')     
     fi
 
-    if [[ -z "${flac_tag[DISCNUMBER]}" ]]; then
-      flac_tag[DISCNUMBER]=$(echo "${flac_tag[DISC]}" | sed 's;^0;;')
+    if [[ -n "${flac_tag[DISCNUMBER]}" ]]; then
+      flac_tag[DISCNUMBER]=$(echo "${flac_tag[DISCNUMBER]}" | sed 's/^0//')
       metaflac --remove-tag="DISC" --set-tag="DISCNUMBER=${flac_tag[DISCNUMBER]}" "$i"
     fi
 
     ### Disc Total ###
 
-    if [[ -n "${flac_tag[TOTALDISCS]}" ]]; then
+    if [[ -z "${flac_tag[DISCTOTAL]}" && -n "${flac_tag[TOTALDISCS]}" ]]; then
       flac_tag[DISCTOTAL]=$(echo "${flac_tag[TOTALDISCS]}" | sed 's/^0//')
     fi
 
