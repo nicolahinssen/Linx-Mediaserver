@@ -264,7 +264,7 @@ if ls ./*.mp3 >/dev/null 2>&1; then
 
     ### Date ###
 
-    if [[ -z "${mp3_tag[TDRC]}" ]]; then
+    if [[ -z "${mp3_tag[TDRC]}" && -z "${mp3_tag[TYER]}" ]]; then
       mp3_tag[TDRC]="$NFO_YEAR"
       mid3v2 --TDRC "${mp3_tag[TDRC]}" "$i"
     fi
