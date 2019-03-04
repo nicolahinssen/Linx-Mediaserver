@@ -8,6 +8,7 @@ import glob
 import argparse
 import struct
 import logging
+from extensions import valid_tagging_extensions
 from readSettings import ReadSettings
 from tvdb_mp4 import Tvdb_mp4
 from tmdb_mp4 import tmdb_mp4
@@ -21,7 +22,18 @@ from logging.config import fileConfig
 if sys.version[0] == "3":
     raw_input = input
 
-fileConfig(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini'), defaults={'logfilename': os.path.join(os.path.dirname(sys.argv[0]), 'info.log').replace("\\", "/")})
+logpath = '/var/log/sickbeard_mp4_automator'
+if os.name == 'nt':
+    logpath = os.path.dirname(sys.argv[0])
+elif not os.path.isdir(logpath):
+    try:
+        os.mkdir(logpath)
+    except:
+        logpath = os.path.dirname(sys.argv[0])
+configPath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini')).replace("\\", "\\\\")
+logPath = os.path.abspath(os.path.join(logpath, 'index.log')).replace("\\", "\\\\")
+fileConfig(configPath, defaults={'logfilename': logPath})
+
 log = logging.getLogger("MANUAL")
 logging.getLogger("subliminal").setLevel(logging.CRITICAL)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -206,14 +218,14 @@ def processFile(inputfile, tagdata, relativePath=None):
         converter = MkvtoMp4(settings, logger=log)
         output = converter.process(inputfile, True)
         if output:
-            if tagmp4 is not None:
+            if tagmp4 is not None and output['output_extension'] in valid_tagging_extensions:
                 try:
                     tagmp4.setHD(output['x'], output['y'])
                     tagmp4.writeTags(output['output'], settings.artwork, settings.thumbnail)
                 except Exception as e:
                     print("There was an error tagging the file")
                     print(e)
-            if settings.relocate_moov:
+            if settings.relocate_moov and output['output_extension'] in valid_tagging_extensions:
                 converter.QTFS(output['output'])
             output_files = converter.replicate(output['output'], relativePath=relativePath)
             if settings.postprocess:

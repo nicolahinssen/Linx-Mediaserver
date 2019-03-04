@@ -1,55 +1,42 @@
 #!/bin/bash
 
+# $1 = Full Path
+# $2 = Genre
+
 logfile="/srv/rtorrent/config/rtorrent/log/rtorrent-postprocess.log"
 exec > >(tee -a $logfile)
 exec 2>&1
-
-(
-flock 200
 
 echo "$(date '+%d/%m/%y %H:%M:%S') | manual-postprocess"
 
 SAVEFILE=/srv/rtorrent/config/rtorrent/vars.txt
 
-echo "$1"
-echo "$2"
-echo "$3"
+base_path="$1"
+name=$(basename "$base_path")
+custom1="$2"
 
-cd "$1"
+cd "$base_path"
 
-if find ./*/ -type d 2>/dev/null; then
+if find ./*/ -type d 2>/dev/null && [ -z "$(find . -maxdepth 1 -type d -iname 'disc*' -or -iname 'cd*' | head -1)" ]; then
   echo "Multiple folders detected."
-  for d in */; do
-    echo "base_path="\""$1/$d\"" > $SAVEFILE
-    echo "name="\""$d\"" >> $SAVEFILE
-    echo "custom1="\""$3\"" >> $SAVEFILE
 
-    sed -i 's:/srv/rtorrent/data/:/mnt/nfs/rtorrent/data/:g' $SAVEFILE
+  for d in */; do
+    echo "base_path="\""$base_path/$d\"" > $SAVEFILE
+    echo "name="\""$d\"" >> $SAVEFILE
+    echo "custom1="\""$custom1\"" >> $SAVEFILE
 
     echo "Directory: $d"
     cat $SAVEFILE
 
-    if [[ $1 == *"/data/HardBay"* ]] || [[ $1 == *"/data/Redacted"* ]]; then
-      ssh nicola@192.168.178.32 /mnt/nfs/rtorrent/config/rtorrent/postprocess.sh
-    fi
-
-    echo "Command executed on remote machine."
+    /srv/rtorrent/config/rtorrent/music-postprocess.sh
   done
+
 else
-  echo "base_path="\""$1\"" > $SAVEFILE
-  echo "name="\""$2\"" >> $SAVEFILE
-  echo "custom1="\""$3\"" >> $SAVEFILE
-  
-  sed -i 's:/srv/rtorrent/data/:/mnt/nfs/rtorrent/data/:g' $SAVEFILE
-  # sed -i 's:%20: :g;s:%2F:/:g;s:%26:&:g'
+  echo "base_path="\""$base_path\"" > $SAVEFILE
+  echo "name="\""$name\"" >> $SAVEFILE
+  echo "custom1="\""$custom1\"" >> $SAVEFILE
 
   cat $SAVEFILE
 
-  if [[ $1 == *"/data/HardBay"* ]] || [[ $1 == *"/data/Redacted"* ]]; then
-    ssh nicola@192.168.178.32 /mnt/nfs/rtorrent/config/rtorrent/postprocess.sh
-  fi
-
-  echo "Command executed on remote machine."
+  /srv/rtorrent/config/rtorrent/music-postprocess.sh
 fi
-
-) 200>/srv/rtorrent/config/rtorrent/postprocess.lock

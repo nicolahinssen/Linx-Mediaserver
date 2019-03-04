@@ -1,8 +1,12 @@
 #!/bin/bash
 
-logfile="/config/rtorrent/log/rtorrent-postprocess.log"
-exec > >(tee -a $logfile)
+logfile="/config/rtorrent/log/rtorrent-postprocess.log.tmp"
+exec > >(tee $logfile)
 exec 2>&1
+
+if [[ "$3" == "Upload" ]]; then
+  exit 0
+fi
 
 (
 flock 200
@@ -13,7 +17,7 @@ SAVEFILE=/config/rtorrent/vars.txt
 
 cd "$1"
 
-if find ./*/ -type d 2>/dev/null; then
+if find ./*/ -type d 2>/dev/null && [ -z "$(find . -maxdepth 1 -type d -iname 'disc*' -or -iname 'cd*' | head -1)" ]; then
   echo "Multiple folders detected."
   for d in */; do
     echo "base_path="\""$1/$d\"" > $SAVEFILE
@@ -26,9 +30,7 @@ if find ./*/ -type d 2>/dev/null; then
     echo "Directory: $d"
     cat $SAVEFILE
 
-    if [[ $1 == *"/data/HardBay"* ]] || [[ $1 == *"/data/Redacted"* ]]; then
-      ssh nicola@192.168.178.13 /srv/rtorrent/config/rtorrent/music-postprocess.sh
-    fi
+    ssh nicola@192.168.178.13 /srv/rtorrent/config/rtorrent/music-postprocess.sh
   done
 else
   echo "base_path="\""$1\"" > $SAVEFILE
@@ -40,9 +42,9 @@ else
 
   cat $SAVEFILE
 
-  if [[ $1 == *"/data/HardBay"* ]] || [[ $1 == *"/data/Redacted"* ]]; then
-    ssh nicola@192.168.178.13 /srv/rtorrent/config/rtorrent/music-postprocess.sh
-  fi
+  ssh nicola@192.168.178.13 /srv/rtorrent/config/rtorrent/music-postprocess.sh
 fi
+
+cat $logfile >> /config/rtorrent/log/rtorrent-postprocess.log
 
 ) 200>/config/rtorrent/postprocess.lock

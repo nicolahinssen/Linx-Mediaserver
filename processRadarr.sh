@@ -21,6 +21,4 @@ export -p | grep 'radarr_*' > /srv/scripts/radarr_variables.txt
 
 cd "$(dirname "$radarr_moviefile_path")"
 
-#subliminal --addic7ed escapereality tessel --opensubtitles escape-reality tessel download -l nl -l en  -p addic7ed -p opensubtitles -p podnapisi -p shooter -p thesubdb -p tvsubtitles -r metadata -f "$radarr_moviefile_path"
-
 /srv/scripts/sickbeard_mp4_automator/venv/bin/python /srv/scripts/sickbeard_mp4_automator/postRadarr.py 

@@ -1,22 +1,22 @@
 #!/bin/bash
 
-################################################################
-#                         DEPENDENCIES                         #      
-################################################################
-#                                                              #
-# bpmwrap.sh                                                   #
-#   https://github.com/meridius/bpmwrap/blob/master/bpmwrap.sh #
-#                                                              #
-# beets                                                        #
-#   https://github.com/beetbox/beets                           #
-#                                                              #
-# metaflac (from "flac" package)                               #
-#   https://github.com/xiph/flac                               #
-#                                                              #
-# mid3v2 (from "python-mutagen" package)                       #
-#   https://github.com/quodlibet/python-mutagen                #
-#                                                              #
-################################################################
+###################################################################################
+#                                  DEPENDENCIES                                   #      
+###################################################################################
+#                                                                                 #
+# bpmwrap.sh                                                                      #
+#   https://github.com/meridius/bpmwrap/blob/master/bpmwrap.sh                    #
+#                                                                                 #
+# beets                                                                           #
+#   https://github.com/beetbox/beets                                              #
+#                                                                                 #
+# metaflac (from "flac" package)                                                  #
+#   https://github.com/xiph/flac                                                  #
+#                                                                                 #
+# mid3v2 (from "python-mutagen" package)                                          #
+#   https://github.com/quodlibet/python-mutagen                                   #
+#                                                                                 #
+###################################################################################
 
 
 source /srv/rtorrent/config/rtorrent/vars.txt
@@ -31,78 +31,80 @@ echo ""
 echo ""
 echo "#####  Post-Processing started for $name  #####"
 
+if [ ! -d "$base_path" ]; then
+  exit
+fi
+
 cp -rv "$base_path/" "$temppath"/
 cd "$temppath/$name" || exit
 
 
-###################################################################################
-#                                   NFO PARSING                                   #
-###################################################################################
-
-if ls ./*.nfo >/dev/null 2>&1; then
-
-  sed -i 's; N/A;;g' ./*.nfo
-  sed -i 's/ None$//g' ./*.nfo
+parse_nfo () {
+  sed -i 's; N/A;;g' "./$1"*.nfo
+  sed -i 's/ None$//g' "./$1"*.nfo
 
   ### Album ###
 
-  NFO_PUBLISHER=$(cat ./*.nfo | grep -oP -i '(?:album|title).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
+  NFO_PUBLISHER=$(cat "./$1"*.nfo | grep -oP -i '(?:album|title).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
 
   if [[ -z "$NFO_PUBLISHER" ]]; then
-    NFO_PUBLISHER=$(cat ./*.nfo | grep -oP -i '(?:album|title).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))' | sed 's/ *$//g')
+    NFO_PUBLISHER=$(cat "./$1"*.nfo | grep -oP -i '(?:album|title).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))' | sed 's/ *$//g')
   fi
 
   ### Publisher ###
 
-  NFO_PUBLISHER=$(cat ./*.nfo | grep -oP -i '(?:label|company|publisher).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
+  NFO_PUBLISHER=$(cat "./$1"*.nfo | grep -oP -i '(?:label|company|publisher).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
 
   if [[ -z "$NFO_PUBLISHER" ]]; then
-    NFO_PUBLISHER=$(cat ./*.nfo | grep -oP -i '(?:label|company|publisher).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))' | sed 's/ *$//g')
+    NFO_PUBLISHER=$(cat "./$1"*.nfo | grep -oP -i '(?:label|company|publisher).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))' | sed 's/ *$//g')
   fi
 
   ### Album Artist ###
 
-  NFO_ALBUMARTIST=$(cat ./*.nfo | grep -oP -i '(?:artist|artists|performer).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
+  NFO_ALBUMARTIST=$(cat "./$1"*.nfo | grep -oP -i '(?:artist|artists|performer).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
 
   if [[ -z "$NFO_ALBUMARTIST" ]]; then
-    NFO_ALBUMARTIST=$(cat ./*.nfo | grep -oP -i '(?:artist|artists|performer).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))' | sed 's/ *$//g')
+    NFO_ALBUMARTIST=$(cat "./$1"*.nfo | grep -oP -i '(?:artist|artists|performer).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9-&-.]+ ?)*))' | sed 's/ *$//g')
   fi
 
   ### Catalog Number ###
 
-  NFO_CATALOGNUMBER=$(cat ./*.nfo | grep -oP -i '(?:cat|catalog).? ?(?:nr|number|#).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
+  NFO_CATALOGNUMBER=$(cat "./$1"*.nfo | grep -oP -i '(?:cat|catalog).? ?(?:nr|number|#).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
 
   if [[ -z "$NFO_CATALOGNUMBER" ]]; then
-    NFO_CATALOGNUMBER=$(cat ./*.nfo | grep -oP -i '(?:cat|catalog).? ?(?:nr|number|#).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9]+ ?)*))' | sed 's/ *$//g')
+    NFO_CATALOGNUMBER=$(cat "./$1"*.nfo | grep -oP -i '(?:cat|catalog).? ?(?:nr|number|#).*(?:\:|\[|\]|\=|\-)[\s]* \K(((?:[a-zA-Z0-9]+ ?)*))' | sed 's/ *$//g')
   fi
 
   ### Track Total ###
 
-  NFO_TRACKTOTAL=$(cat ./*.nfo | grep -oP -i '(?:tracks|trackcount).*(?:\:|\[|\]|\=|\-)[\s]* 0?\K(((?:[0-9]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
+  NFO_TRACKTOTAL=$(cat "./$1"*.nfo | grep -oP -i '(?:tracks|trackcount).*(?:\:|\[|\]|\=|\-)[\s]* 0?\K(((?:[0-9]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
 
   if [[ -z "$NFO_TRACKTOTAL" ]]; then
-    NFO_TRACKTOTAL=$(cat ./*.nfo | grep -oP -i '(?:tracks|trackcount).*(?:\:|\[|\]|\=|\-)[\s]* 0?\K(((?:[0-9]+ ?)*))' | sed 's/ *$//g')
+    NFO_TRACKTOTAL=$(cat "./$1"*.nfo | grep -oP -i '(?:tracks|trackcount).*(?:\:|\[|\]|\=|\-)[\s]* 0?\K(((?:[0-9]+ ?)*))' | sed 's/ *$//g')
   fi
 
   ### Year ###
 
-  NFO_YEAR=$(cat ./*.nfo | grep -oP -i '(?:date|year).*(?:\:|\[|\]|\=|\-)[\s]* .*(?=[0-9]{4})\K([1-2][0-9]{3})' | sed 's/ *$//g')
+  NFO_YEAR=$(cat "./$1"*.nfo | grep -oP -i '(?:date|year).*(?:\:|\[|\]|\=|\-)[\s]* .*(?=[0-9]{4})\K([1-2][0-9]{3})' | sed 's/ *$//g')
+}
 
-fi
 
-
-###################################################################################
-#                                   MP3 PARSING                                   #
-###################################################################################
-
-if ls ./*.mp3 >/dev/null 2>&1; then
-  for i in ./*.mp3; do
+parse_mp3 () {
+  for i in "./$1"*.mp3; do
     echo ""
     echo "PROCESSING MP3 TRACK | $i"
     echo ""
-    echo "### ORIGINAL TAGS ###"
     echo ""
-    mid3v2 --list "$i"
+    echo "###############################################################################"
+    echo "###############################  ORIGINAL TAGS  ###############################"
+    echo "###"
+    echo "###"
+    mid3v2 --list "$i" | sed 's/^/###  /'
+    echo "###"
+    echo "###"
+    echo "###############################################################################"
+    echo "###############################################################################"
+    echo ""
     echo ""
 
     ############ FILENAME PARSING ############
@@ -237,6 +239,7 @@ if ls ./*.mp3 >/dev/null 2>&1; then
     fi
 
     if [[ -n "${mp3_tag[TPE2]}" ]]; then
+      mp3_tag[TPE2]=$(echo "${mp3_tag[TPE2]}" | sed -E 's| [fF](ea)?t\.? .*||g')
       mid3v2 --TPE2 "${mp3_tag[TPE2]}" "$i"
     fi
 
@@ -258,7 +261,7 @@ if ls ./*.mp3 >/dev/null 2>&1; then
 
     mp3_tag[TCON]="$custom1"
 
-    if [[ -n "${mp3_tag[TCON]}" ]]; then
+    if [[ -n "${mp3_tag[TCON]}" && "${mp3_tag[TCON]}" != "Upload" ]]; then
       mid3v2 --TCON "${mp3_tag[TCON]}" "$i"
     fi
 
@@ -274,34 +277,49 @@ if ls ./*.mp3 >/dev/null 2>&1; then
     if [[ -z "${mp3_tag[TBPM]}" ]]; then
       if [ "${mp3_tag[TCON]}" == "Hardstyle" ]; then
         /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -w -m 130 -x 200 "$i"
+      elif [ "${mp3_tag[TCON]}" == "Pop" ]; then
+        /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -w -m 70 -x 180 "$i"
       else
-        /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -w -m 80 -x 320 "$i"
+        /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -w -m 70 -x 300 "$i"
       fi
     fi
 
     echo ""
-    echo "### NEW  TAGS ###"
     echo ""
-    mid3v2 --list "$i"
+    echo "###############################################################################"
+    echo "#################################  NEW TAGS  ##################################"
+    echo "###"
+    echo "###"
+    mid3v2 --list "$i" | sed 's/^/###  /'
+    echo "###"
+    echo "###"
+    echo "###############################################################################"
+    echo "###############################################################################"
+    echo ""
+    echo ""
 
     unset mp3_tag
     unset mp3_tag_TXXX
   done
-fi
+}
 
 
-###################################################################################
-#                                  FLAC PARSING                                   #
-###################################################################################
-
-if ls ./*.flac >/dev/null 2>&1; then
-  for i in ./*.flac; do
+parse_flac () {
+  for i in "./$1"*.flac; do
     echo ""
-    echo "PROCESSING MP3 TRACK | $i"
+    echo "PROCESSING FLAC TRACK | $i"
     echo ""
-    echo "### ORIGINAL TAGS ###"
     echo ""
-    metaflac --export-tags-to=- "$i"
+    echo "###############################################################################"
+    echo "###############################  ORIGINAL TAGS  ###############################"
+    echo "###"
+    echo "###"
+    metaflac --export-tags-to=- "$i" | sed 's/^/###  /'
+    echo "###"
+    echo "###"
+    echo "###############################################################################"
+    echo "###############################################################################"
+    echo ""
     echo ""
 
 
@@ -333,141 +351,199 @@ if ls ./*.flac >/dev/null 2>&1; then
 
     if [[ -z "${flac_tag[TITLE]}" ]]; then
       flac_tag[TITLE]="$FLAC_FILENAME_TITLE"
-    fi
 
-    if [[ -n "${flac_tag[TITLE]}" ]]; then
-      metaflac --set-tag="TITLE=${flac_tag[TITLE]}" "$i"
+      if [[ -n "${flac_tag[TITLE]}" ]]; then
+        metaflac --set-tag="TITLE=${flac_tag[TITLE]}" "$i"
+      fi
     fi
 
     ### Artist ###
 
     if [[ -z "${flac_tag[ARTIST]}" ]]; then
-      flac_tag[ARTIST]="$FLAC_FILENAME_ARTIST"
+      flac_artist="$FLAC_FILENAME_ARTIST"
+    
+      if [[ "$flac_artist" =~ ^[Vv][^[:alnum:]_]*[Aa][^[:alnum:]_]*(rious)?[^[:alnum:]]*([Aa]rtist(s)?)?[^[:alnum:]_]*$ ]]; then
+        flac_artist="Various Artists"
+      fi
+
+      if [[ -n "$flac_artist" ]]; then
+        metaflac --set-tag="ARTIST=$flac_artist" "$i"
+      fi
     fi
 
-    if [[ "${flac_tag[ARTIST]}" =~ ^[Vv][^[:alnum:]_]*[Aa][^[:alnum:]_]*(rious)?[^[:alnum:]]*([Aa]rtist(s)?)?[^[:alnum:]_]*$ ]]; then
-      flac_tag[ARTIST]="Various Artists"
-    fi
-
-    if [[ -n "${flac_tag[ARTIST]}" ]]; then
-      metaflac --set-tag="ARTIST=${flac_tag[ARTIST]}" "$i"
-    fi
+    flac_artist=""
 
     ### Album ###
 
     if [[ -n "${flac_tag[ALBUM]}" ]]; then
-      flac_tag[ALBUM]="$(echo "${flac_tag[ALBUM]}" | sed 's/\sWEB//' | sed 's/\sEP//')"
-      metaflac --set-tag="ALBUM=${flac_tag[ALBUM]}" "$i"
+      flac_album="$(echo "${flac_tag[ALBUM]}" | sed 's/\sWEB//' | sed 's/\sEP//')"
+      metaflac --remove-tag="ALBUM" "$1"
+      metaflac --set-tag="ALBUM=$flac_album" "$i"
     fi
+
+    flac_album=""
 
     ### Track Number ###
 
-    if [[ -z "${flac_tag[TRACKNUMBER]}" && -n "${flac_tag[TRACK]}" ]]; then
-      flac_tag[TRACKNUMBER]=$(echo "${flac_tag[TRACK]}" | sed 's/^0//')
-    fi
-
-    if [[ -z "${flac_tag[TRACKNUMBER]}" ]]; then
-      flac_tag[TRACKNUMBER]="$FLAC_FILENAME_TRACKNUMBER"
-    fi
-
     if [[ -n "${flac_tag[TRACKNUMBER]}" ]]; then
-      flac_tag[TRACKNUMBER]=$(echo "${flac_tag[TRACKNUMBER]}" | sed 's/^0//')
-      metaflac --remove-tag="TRACK" --set-tag="TRACKNUMBER=${flac_tag[TRACKNUMBER]}" "$i"
+      flac_tracknumber="${flac_tag[TRACKNUMBER]}"
+      metaflac --remove-tag="TRACKNUMBER" "$1"
     fi
+
+    if [[ -n "${flac_tag[TRACK]}" ]]; then
+      flac_tracknumber="${flac_tag[TRACK]}"
+      metaflac --remove-tag="TRACK" "$1"
+    fi
+
+    if [[ -z "$flac_tracknumber" ]]; then
+      flac_tracknumber="$FLAC_FILENAME_TRACKNUMBER"
+    fi
+
+    if [[ -n "$flac_tracknumber" ]]; then
+      flac_tracknumber=$(echo "$flac_tracknumber" | sed 's/^0//')
+      metaflac --set-tag="TRACKNUMBER=$flac_tracknumber" "$i"
+    fi
+
+    flac_tracknumber=""
 
     ### Track Total ###
 
-    if [[ -z "${flac_tag[TRACKTOTAL]}" && -n "${flac_tag[TOTALTRACKS]}" ]]; then
-      flac_tag[TRACKTOTAL]=$(echo "${flac_tag[TOTALTRACKS]}" | sed 's/^0//')
+    if [[ -n "${flac_tag[TOTALTRACKS]}" ]]; then
+      flac_totaltracks="${flac_tag[TOTALTRACKS]}"
+      metaflac --remove-tag="TOTALTRACKS" "$1"
     fi
-
-    if [[ -z "${flac_tag[TRACKTOTAL]}" ]]; then
-      flac_tag[TRACKTOTAL]="$NFO_TRACKTOTAL"
-    fi    
 
     if [[ -n "${flac_tag[TRACKTOTAL]}" ]]; then
-      flac_tag[TRACKTOTAL]=$(echo "${flac_tag[TRACKTOTAL]}" | sed 's/^0//')
-      metaflac --remove-tag="TRACKC" --set-tag="TRACKTOTAL=${flac_tag[TRACKTOTAL]}" --set-tag="TOTALTRACKS=${flac_tag[TRACKTOTAL]}" "$i"
+      flac_totaltracks="${flac_tag[TRACKTOTAL]}"
+      metaflac --remove-tag="TRACKTOTAL" "$1"
     fi
+
+    if [[ -z "$flac_totaltracks" ]]; then
+      flac_totaltracks="$NFO_TRACKTOTAL"
+    fi    
+
+    if [[ -n "$flac_totaltracks" ]]; then
+      flac_totaltracks=$(echo "$flac_totaltracks" | sed 's/^0//')
+      metaflac --remove-tag="TRACKC" --set-tag="TOTALTRACKS=$flac_totaltracks" "$i"
+    fi
+
+    flac_totaltracks=""
 
     ### Disc Number ###
 
-    if [[ -z "${flac_tag[DISCNUMBER]}" && -n "${flac_tag[DISC]}" ]]; then
-      flac_tag[DISCNUMBER]=$(echo "${flac_tag[DISC]}" | sed 's;^0;;')     
+    if [[ -n "${flac_tag[DISCNUMBER]}" ]]; then
+      flac_discnumber="${flac_tag[DISCNUMBER]}"
+      metaflac --remove-tag="DISCNUMBER" "$1"
     fi
 
-    if [[ -n "${flac_tag[DISCNUMBER]}" ]]; then
-      flac_tag[DISCNUMBER]=$(echo "${flac_tag[DISCNUMBER]}" | sed 's/^0//')
-      metaflac --remove-tag="DISC" --set-tag="DISCNUMBER=${flac_tag[DISCNUMBER]}" "$i"
+    if [[ -n "${flac_tag[DISC]}" ]]; then
+      flac_discnumber="${flac_tag[DISC]}"
+      metaflac --remove-tag="DISC" "$1"
     fi
+
+    if [[ -n "$flac_discnumber" ]]; then
+      flac_discnumber=$(echo "$flac_discnumber" | sed 's/^0//')
+      metaflac --set-tag="DISCNUMBER=$flac_discnumber" "$i"
+    fi
+
+    flac_discnumber=""
 
     ### Disc Total ###
 
-    if [[ -z "${flac_tag[DISCTOTAL]}" && -n "${flac_tag[TOTALDISCS]}" ]]; then
-      flac_tag[DISCTOTAL]=$(echo "${flac_tag[TOTALDISCS]}" | sed 's/^0//')
+    if [[ -n "${flac_tag[TOTALDISCS]}" ]]; then
+      flac_totaldiscs="${flac_tag[TOTALDISCS]}"
+      metaflac --remove-tag="TOTALDISCS" "$1"
     fi
 
     if [[ -n "${flac_tag[DISCTOTAL]}" ]]; then
-      flac_tag[TOTALDISCS]=$(echo "${flac_tag[DISCTOTAL]}" | sed 's/^0//')
-      metaflac --set-tag="TOTALDISCS=${flac_tag[TOTALDISCS]}" --set-tag="DISCTOTAL=${flac_tag[DISCTOTAL]}" "$i"
+      flac_totaldiscs="${flac_tag[DISCTOTAL]}"
+      metaflac --remove-tag="DISCTOTAL" "$1"
     fi
+
+    if [[ -z "$flac_totaldiscs" ]]; then
+      flac_totaldiscs="$NFO_DISCTOTAL"
+    fi    
+
+    if [[ -n "$flac_totaldiscs" ]]; then
+      flac_totaldiscs=$(echo "$flac_totaldiscs" | sed 's/^0//')
+      metaflac --set-tag="TOTALDISCS=$flac_totaldiscs" "$i"
+    fi
+
+    flac_totaldiscs=""
 
     ### Publisher ###
 
-    if [[ -z "${flac_tag[PUBLISHER]}" ]]; then
-      flac_tag[PUBLISHER]="$NFO_PUBLISHER"
+    if [[ -n "${flac_tag[PUBLISHER]}" ]]; then
+      flac_publisher="${flac_tag[PUBLISHER]}"
+      metaflac --remove-tag="PUBLISHER" "$1"
     fi
 
-    if [[ -n "${flac_tag[PUBLISHER]}" ]]; then
-      metaflac --set-tag="PUBLISHER=${flac_tag[PUBLISHER]}" "$i"
+    if [[ -z "$flac_publisher" ]]; then
+      flac_publisher="$NFO_PUBLISHER"
     fi
+
+    if [[ -n "$flac_publisher" ]]; then
+      metaflac --set-tag="PUBLISHER=$flac_publisher" "$i"
+    fi
+
+    flac_publisher=""
 
     ### Album Artist ###
 
-    if [[ -z "${flac_tag[ALBUMARTIST]}" ]]; then
-      flac_tag[ALBUMARTIST]="$NFO_ALBUMARTIST"
+    if [[ -n "${flac_tag[ALBUMARTIST]}" ]]; then
+      flac_albumartist="${flac_tag[ALBUMARTIST]}"
+      metaflac --remove-tag="ALBUMARTIST" "$1"
     fi
 
-    if [[ -z "${flac_tag[ALBUMARTIST]}" ]]; then
-      flac_tag[ALBUMARTIST]="${flac_tag[ALBUM ARTIST]}"
+    if [[ -n "${flac_tag[ALBUM ARTIST]}" ]]; then
+      flac_albumartist="${flac_tag[ALBUM ARTIST]}"
+      metaflac --remove-tag="ALBUM ARTIST" "$1"
     fi
 
-    if [[ -z "${flac_tag[ALBUMARTIST]}" ]]; then
-      flac_tag[ALBUMARTIST]="${flac_tag[ARTIST]}"
+    if [[ -z "$flac_albumartist" ]]; then
+      flac_albumartist="$NFO_ALBUMARTIST"
     fi
 
-    if [[ "${flac_tag[ALBUMARTIST]}" =~ ^[Vv][^[:alnum:]_]*[Aa][^[:alnum:]_]*(rious)?[^[:alnum:]]*([Aa]rtist(s)?)?[^[:alnum:]_]*$ ]]; then
-      flac_tag[ALBUMARTIST]="Various Artists"
+    if [[ -z "$flac_albumartist" ]]; then
+      flac_albumartist="${flac_tag[ARTIST]}"
     fi
 
-    if [ "${flac_tag[ALBUMARTIST]}" == "Various Artists" ]; then
-      flac_tag[COMPILATION]="1"
+    if [[ "$flac_albumartist" =~ ^[Vv][^[:alnum:]_]*[Aa][^[:alnum:]_]*(rious)?[^[:alnum:]]*([Aa]rtist(s)?)?[^[:alnum:]_]*$ ]]; then
+      flac_albumartist="Various Artists"
+    fi
+
+    if [ "$flac_albumartist" == "Various Artists" ]; then
+      if [[ -z "${flac_tag[COMPILATION]}" ]]; then
+        metaflac --set-tag="COMPILATION=1" "$i"
+      fi
       compilation="1"
     fi
 
-    if [[ -n "${flac_tag[ALBUMARTIST]}" ]]; then
-      metaflac --remove-tag="ALBUM ARTIST" --set-tag="ALBUMARTIST=${flac_tag[ALBUMARTIST]}" "$i"
+    if [[ -n "$flac_albumartist" ]]; then
+      metaflac --set-tag="ALBUMARTIST=$flac_albumartist" "$i"
     fi
+
+    flac_albumartist=""
 
     ### Catalog Number ###
 
     if [[ -z "${flac_tag[CATALOGNUMBER]}" ]]; then
       flac_tag[CATALOGNUMBER]="$NFO_CATALOGNUMBER"
-    fi
+    
+      if [[ -z "${flac_tag[CATALOGNUMBER]}" ]]; then
+        flac_tag[CATALOGNUMBER]=$(metaflac --export-tags-to=- "$i" | grep -oP -i '(?:cat|catalog).? ?(?:nr|number|#)=\K(((?:[a-zA-Z0-9]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
+      fi
 
-    if [[ -z "${flac_tag[CATALOGNUMBER]}" ]]; then
-      flac_tag[CATALOGNUMBER]=$(metaflac --export-tags-to=- "$i" | grep -oP -i '(?:cat|catalog).? ?(?:nr|number|#)=\K(((?:[a-zA-Z0-9]+ ?)*))(?:\s|$)' | sed 's/ *$//g')
-    fi
-
-    if [[ -n "${flac_tag[CATALOGNUMBER]}" ]]; then
-      metaflac --set-tag="CATALOGNUMBER=${flac_tag[CATALOGNUMBER]}" "$i"
+      if [[ -n "${flac_tag[CATALOGNUMBER]}" ]]; then
+        metaflac --set-tag="CATALOGNUMBER=${flac_tag[CATALOGNUMBER]}" "$i"
+      fi
     fi
 
     ### Genre ###
 
-    flac_tag[GENRE]="$custom1"
+    flac_genre="$custom1"
 
-    if [[ -n "${flac_tag[GENRE]}" ]]; then
+    if [[ -n "$flac_genre" ]]; then
       metaflac --set-tag="GENRE=${flac_tag[GENRE]}" "$i"
     fi
 
@@ -482,20 +558,61 @@ if ls ./*.flac >/dev/null 2>&1; then
 
     if [[ -z "${flac_tag[BPM]}" ]]; then
       if [ "${flac_tag[GENRE]}" == "Hardstyle" ]; then
-        /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -t flac -w -m 130 -x 200 "$i"
-      else
+        /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -t flac -w -m 135 -x 180 "$i"
+      elif [ "${flac_tag[GENRE]}" == "Hardcore" ]; then
+        /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -t flac -w -m 160 -x 320 "$i"
+      else 
         /srv/rtorrent/config/rtorrent/bpmwrap.sh -v -t flac -w -m 80 -x 320 "$i"
       fi
     fi
 
     echo ""
-    echo "### NEW  TAGS ###"
     echo ""
-    metaflac --export-tags-to=- "$i"
+    echo "###############################################################################"
+    echo "#################################  NEW TAGS  ##################################"
+    echo "###"
+    echo "###"
+    metaflac --export-tags-to=- "$i" | sed 's/^/###  /'
+    echo "###"
+    echo "###"
+    echo "###############################################################################"
+    echo "###############################################################################"
+    echo ""
+    echo ""
 
     unset flac_tag
   done
+}
+
+if ls ./*.nfo >/dev/null 2>&1; then
+  parse_nfo
 fi
+
+if find ./*/ -type d 2>/dev/null; then
+  echo "Multiple disc-folders detected."
+  for d in */; do
+    if ls "./$d"*.nfo >/dev/null 2>&1; then
+      parse_nfo "$d"
+    fi
+
+    if ls "./$d"*.mp3 >/dev/null 2>&1; then
+      parse_mp3 "$d"
+    fi
+
+    if ls "./$d"*.flac >/dev/null 2>&1; then
+      parse_flac "$d"
+    fi
+  done
+else
+  if ls ./*.mp3 >/dev/null 2>&1; then
+    parse_mp3
+  fi
+
+  if ls ./*.flac >/dev/null 2>&1; then
+    parse_flac
+  fi
+fi
+
 
 ### Beets Import ###
 
@@ -507,9 +624,9 @@ fi
 
 rm -r "${temppath:?}/${name:?}"
 
-echo "-------------------------------"
-echo "||   Processing completed!   ||"
-echo "-------------------------------"
+echo "-----------------------------------------------------------"
+echo "||                 Processing completed!                 ||"
+echo "-----------------------------------------------------------"
 
 echo "$(date '+%d/%m/%y %H:%M:%S') | $name" >> "$histfile"
 echo "$(date '+%d/%m/%y %H:%M:%S') | Music    | COMPLETED Processing $name" >> "$masterlog"

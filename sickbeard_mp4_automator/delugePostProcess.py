@@ -9,7 +9,17 @@ from deluge_client import DelugeRPCClient
 import logging
 from logging.config import fileConfig
 
-fileConfig(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini'), defaults={'logfilename': os.path.join(os.path.dirname(sys.argv[0]), 'info.log').replace("\\", "/")})
+logpath = '/var/log/sickbeard_mp4_automator'
+if os.name == 'nt':
+    logpath = os.path.dirname(sys.argv[0])
+elif not os.path.isdir(logpath):
+    try:
+        os.mkdir(logpath)
+    except:
+        logpath = os.path.dirname(sys.argv[0])
+configPath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini')).replace("\\", "\\\\")
+logPath = os.path.abspath(os.path.join(logpath, 'index.log')).replace("\\", "\\\\")
+fileConfig(configPath, defaults={'logfilename': logPath})
 log = logging.getLogger("delugePostProcess")
 
 log.info("Deluge post processing started.")
@@ -67,9 +77,8 @@ if settings.deluge['convert']:
     # Perform conversion.
     settings.delete = False
     if not settings.output_dir:
-        suffix = "-convert"
-        torrent_name = torrent_name[:260-len(suffix)]
-        settings.output_dir = os.path.join(path, ("%s%s" % (torrent_name, suffix)))
+        suffix = "convert"
+        settings.output_dir = os.path.join(path, ("%s-%s" % (torrent_name, suffix)))
         if not os.path.exists(settings.output_dir):
             os.mkdir(settings.output_dir)
         delete_dir = settings.output_dir
@@ -87,9 +96,8 @@ if settings.deluge['convert']:
 
     path = converter.output_dir
 else:
-    suffix = "-copy"
-    torrent_name = torrent_name[:260-len(suffix)]
-    newpath = os.path.join(path, ("%s%s" % (torrent_name, suffix)))
+    suffix = "copy"
+    newpath = os.path.join(path, ("%s-%s" % (torrent_name, suffix)))
     if not os.path.exists(newpath):
         os.mkdir(newpath)
     for filename in files:

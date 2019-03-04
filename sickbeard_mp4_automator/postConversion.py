@@ -5,6 +5,7 @@ import json
 import urllib
 import struct
 import logging
+from extensions import valid_tagging_extensions
 from readSettings import ReadSettings
 from autoprocess import plex
 from tvdb_mp4 import Tvdb_mp4
@@ -12,7 +13,17 @@ from mkvtomp4 import MkvtoMp4
 from post_processor import PostProcessor
 from logging.config import fileConfig
 
-fileConfig(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini'), defaults={'logfilename': os.path.join(os.path.dirname(sys.argv[0]), 'info.log')})
+logpath = '/var/log/sickbeard_mp4_automator'
+if os.name == 'nt':
+    logpath = os.path.dirname(sys.argv[0])
+elif not os.path.isdir(logpath):
+    try:
+        os.mkdir(logpath)
+    except:
+        logpath = os.path.dirname(sys.argv[0])
+configPath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini')).replace("\\", "\\\\")
+logPath = os.path.abspath(os.path.join(logpath, 'index.log')).replace("\\", "\\\\")
+fileConfig(configPath, defaults={'logfilename': logPath})
 log = logging.getLogger("SickbeardPostConversion")
 
 log.info("Sickbeard extra script post processing started.")
@@ -40,7 +51,7 @@ if len(sys.argv) > 4:
 
         if output:
             # Tag with metadata
-            if settings.tagfile:
+            if settings.tagfile and output['output_extension'] in valid_tagging_extensions:
                 log.info("Tagging %s with ID %s season %s episode %s." % (inputfile, tvdb_id, season, episode))
                 try:
                     tagmp4 = Tvdb_mp4(tvdb_id, season, episode, original, language=settings.taglanguage)
@@ -50,7 +61,7 @@ if len(sys.argv) > 4:
                     log.error("Unable to tag file")
 
             # QTFS
-            if settings.relocate_moov:
+            if settings.relocate_moov and output['output_extension'] in valid_tagging_extensions:
                 converter.QTFS(output['output'])
 
             # Copy to additional locations

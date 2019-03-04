@@ -3,6 +3,7 @@
 import sys
 import os
 import logging
+from extensions import valid_tagging_extensions
 from readSettings import ReadSettings
 from mkvtomp4 import MkvtoMp4
 from tmdb_mp4 import tmdb_mp4
@@ -10,7 +11,17 @@ from autoprocess import plex
 from post_processor import PostProcessor
 from logging.config import fileConfig
 
-fileConfig(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini'), defaults={'logfilename': os.path.join(os.path.dirname(sys.argv[0]), 'info.log')})
+logpath = '/var/log/sickbeard_mp4_automator'
+if os.name == 'nt':
+    logpath = os.path.dirname(sys.argv[0])
+elif not os.path.isdir(logpath):
+    try:
+        os.mkdir(logpath)
+    except:
+        logpath = os.path.dirname(sys.argv[0])
+configPath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), 'logging.ini')).replace("\\", "\\\\")
+logPath = os.path.abspath(os.path.join(logpath, 'index.log')).replace("\\", "\\\\")
+fileConfig(configPath, defaults={'logfilename': logPath})
 log = logging.getLogger("CouchPotatoPostConversion")
 
 log.info('MP4 Automator - Post processing script initialized')
@@ -34,7 +45,7 @@ try:
 
         if output:
             # Tag with metadata
-            if settings.tagfile:
+            if settings.tagfile and output['output_extension'] in valid_tagging_extensions:
                 log.info('Tagging file with IMDB ID %s', imdbid)
                 try:
                     tagmp4 = tmdb_mp4(imdbid, original=original, language=settings.taglanguage)
@@ -44,7 +55,7 @@ try:
                     log.error("Unable to tag file")
 
             # QTFS
-            if settings.relocate_moov:
+            if settings.relocate_moov and output['output_extension'] in valid_tagging_extensions:
                 converter.QTFS(output['output'])
 
             # Copy to additional locations

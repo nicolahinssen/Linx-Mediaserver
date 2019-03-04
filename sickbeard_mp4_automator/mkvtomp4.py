@@ -6,7 +6,7 @@ import sys
 import shutil
 import logging
 from converter import Converter, FFMpegConvertError
-from extensions import valid_input_extensions, valid_output_extensions, bad_subtitle_codecs, valid_subtitle_extensions, subtitle_codec_extensions
+from extensions import valid_input_extensions, valid_output_extensions, bad_subtitle_codecs, valid_subtitle_extensions, subtitle_codec_extensions, valid_tagging_extensions
 from babelfish import Language
 
 
@@ -23,6 +23,7 @@ class MkvtoMp4:
                  video_bitrate=None,
                  vcrf=None,
                  video_width=None,
+                 video_profile=None,
                  h264_level=None,
                  qsv_decoder=True,
                  hevc_qsv_decoder=False,
@@ -31,6 +32,7 @@ class MkvtoMp4:
                  audio_bitrate=256,
                  audio_filter=None,
                  audio_copyoriginal=False,
+                 audio_first_language_track=False,
                  iOS=False,
                  iOSFirst=False,
                  iOSLast=False,
@@ -83,6 +85,7 @@ class MkvtoMp4:
         self.video_bitrate = video_bitrate
         self.vcrf = vcrf
         self.video_width = video_width
+        self.video_profile = video_profile
         self.h264_level = h264_level
         self.qsv_decoder = qsv_decoder
         self.hevc_qsv_decoder = hevc_qsv_decoder
@@ -101,6 +104,7 @@ class MkvtoMp4:
         self.adl = adl
         self.aac_adtstoasc = aac_adtstoasc
         self.audio_copyoriginal = audio_copyoriginal
+        self.audio_first_language_track = audio_first_language_track
         # Subtitle settings
         self.scodec = scodec
         self.swl = swl
@@ -138,6 +142,7 @@ class MkvtoMp4:
         self.video_bitrate = settings.vbitrate
         self.vcrf = settings.vcrf
         self.video_width = settings.vwidth
+        self.video_profile = settings.vprofile
         self.h264_level = settings.h264_level
         self.qsv_decoder = settings.qsv_decoder
         self.hevc_qsv_decoder = settings.hevc_qsv_decoder
@@ -156,6 +161,7 @@ class MkvtoMp4:
         self.adl = settings.adl
         self.aac_adtstoasc = settings.aac_adtstoasc
         self.audio_copyoriginal = settings.audio_copyoriginal
+        self.audio_first_language_track = settings.audio_first_language_track
         # Subtitle settings
         self.scodec = settings.scodec
         self.swl = settings.swl
@@ -227,17 +233,21 @@ class MkvtoMp4:
                     self.log.debug("Unable to delete subtitle %s." % subfile)
 
         dim = self.getDimensions(outputfile)
+        input_extension = self.parseFile(inputfile)[2].lower()
+        output_extension = self.parseFile(outputfile)[2].lower()
 
         return {'input': inputfile,
-                'output': outputfile,
-                'options': options,
+                'input_extension': input_extension,
                 'input_deleted': deleted,
+                'output': outputfile,
+                'output_extension': output_extension,
+                'options': options,
                 'x': dim['x'],
                 'y': dim['y']}
 
     # Determine if a source video file is in a valid format
     def validSource(self, inputfile):
-        input_dir, filename, input_extension = self.parseFile(inputfile)
+        input_extension = self.parseFile(inputfile)[2]
         # Make sure the input_extension is some sort of recognized extension, and that the file actually exists
         if (input_extension.lower() in valid_input_extensions or input_extension.lower() in valid_output_extensions):
             if (os.path.isfile(inputfile)):
@@ -252,7 +262,7 @@ class MkvtoMp4:
 
     # Determine if a file meets the criteria for processing
     def needProcessing(self, inputfile):
-        input_dir, filename, input_extension = self.parseFile(inputfile)
+        input_extension = self.parseFile(inputfile)[2]
         # Make sure input and output extensions are compatible. If processMP4 is true, then make sure the input extension is a valid output extension and allow to proceed as well
         if (input_extension.lower() in valid_input_extensions or (self.processMP4 is True and input_extension.lower() in valid_output_extensions)) and self.output_extension.lower() in valid_output_extensions:
             self.log.debug("%s needs processing." % inputfile)
@@ -308,7 +318,13 @@ class MkvtoMp4:
 
         self.log.info("Pix Fmt: %s." % info.video.pix_fmt)
         if self.pix_fmt and info.video.pix_fmt.lower() not in self.pix_fmt:
+            self.log.debug("Overriding video pix_fmt. Codec cannot be copied because pix_fmt is not approved.")
             vcodec = self.video_codec[0]
+            pix_fmt = self.pix_fmt[0]
+            if self.video_profile:
+                vprofile = self.video_profile[0]
+        else:
+            pix_fmt = None
 
         if self.video_bitrate is not None and vbr > self.video_bitrate:
             self.log.debug("Overriding video bitrate. Codec cannot be copied because video bitrate is too high.")
@@ -329,6 +345,16 @@ class MkvtoMp4:
         self.log.debug("Video codec: %s." % vcodec)
         self.log.debug("Video bitrate: %s." % vbitrate)
 
+        self.log.info("Profile: %s." % info.video.profile)
+        if self.video_profile and info.video.profile.lower().replace(" ", "") not in self.video_profile:
+            self.log.debug("Video profile is not supported. Video stream can no longer be copied.")
+            vcodec = self.video_codec[0]
+            vprofile = self.video_profile[0]
+            if self.pix_fmt:
+                pix_fmt = self.pix_fmt[0]
+        else:
+            vprofile = None
+
         # Audio streams
         self.log.info("Reading audio streams.")
 
@@ -348,6 +374,7 @@ class MkvtoMp4:
             self.log.info("No audio streams detected in any appropriate language, relaxing restrictions so there will be some audio stream present.")
 
         audio_settings = {}
+        blocked_audio_languages = []
         l = 0
         for a in info.audio:
             try:
@@ -358,8 +385,8 @@ class MkvtoMp4:
 
             self.log.info("Audio detected for stream #%s: %s [%s]." % (a.index, a.codec, a.metadata['language']))
 
-            if a.codec.lower() == 'truehd': # Need to skip it early so that it flags the next track as default.
-                self.log.info( "MP4 containers do not support truehd audio, and converting it is inconsistent due to video/audio sync issues. Skipping stream %s as typically the 2nd audio track is the AC3 core of the truehd stream." % a.index )
+            if self.output_extension in valid_tagging_extensions and a.codec.lower() == 'truehd': # Need to skip it early so that it flags the next track as default.
+                self.log.info("MP4 containers do not support truehd audio, and converting it is inconsistent due to video/audio sync issues. Skipping stream %s as typically the 2nd audio track is the AC3 core of the truehd stream." % a.index )
                 continue
 
             # Set undefined language to default language if specified
@@ -369,7 +396,7 @@ class MkvtoMp4:
 
             # Proceed if no whitelist is set, or if the language is in the whitelist
             iosdata = None
-            if self.awl is None or a.metadata['language'].lower() in self.awl:
+            if self.awl is None or (a.metadata['language'].lower() in self.awl and a.metadata['language'].lower() not in blocked_audio_languages):
                 # Create iOS friendly audio stream if the default audio stream has too many channels (iOS only likes AAC stereo)
                 if self.iOS and a.audio_channels > 2:
                     iOSbitrate = 256 if (self.audio_bitrate * 2) > 256 else (self.audio_bitrate * 2)
@@ -475,6 +502,14 @@ class MkvtoMp4:
                         'disposition': 'none',
                     }})
 
+                # Remove the language if we only want the first track from a given language
+                if self.audio_first_language_track and self.awl:
+                    try:
+                        blocked_audio_languages.append(a.metadata['language'].lower())
+                        self.log.debug("Removing language from whitelist to prevent multiple tracks of the same: %s." % a.metadata['language'])
+                    except:
+                        self.log.error("Unable to remove language %s from whitelist." % a.metadata['language'])
+
         # Subtitle streams
         subtitle_settings = {}
         l = 0
@@ -546,6 +581,11 @@ class MkvtoMp4:
                             self.log.info("%s created." % outputfile)
                         except:
                             self.log.exception("Unabled to create external subtitle file for stream %s." % (s.index))
+                        
+                        try:
+                            os.chmod(outputfile, self.permissions)  # Set permissions of newly created file
+                        except:
+                            self.log.exception("Unable to set new file permissions.")
 
         # Attempt to download subtitles if they are missing using subliminal
         languages = set()
@@ -635,7 +675,9 @@ class MkvtoMp4:
                 'codec': vcodec,
                 'map': info.video.index,
                 'bitrate': vbitrate,
-                'level': self.h264_level
+                'level': self.h264_level,
+                'profile': vprofile,
+                'pix_fmt': pix_fmt
             },
             'audio': audio_settings,
             'subtitle': subtitle_settings,
@@ -667,10 +709,6 @@ class MkvtoMp4:
         # Add width option
         if vwidth:
             options['video']['width'] = vwidth
-
-        # Add pix_fmt
-        if self.pix_fmt:
-            options['video']['pix_fmt'] = self.pix_fmt[0]
 
         # HEVC Tagging for copied streams
         if info.video.codec.lower() in ['x265', 'h265', 'hevc'] and vcodec == 'copy':

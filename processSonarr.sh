@@ -30,10 +30,4 @@ export sonarr_download_id="$sonarr_download_id"
 
 export -p | grep 'sonarr_*' > /srv/scripts/sonarr_variables.txt
 
-### Find subtitles ###
-#
-#cd "$(dirname "$sonarr_episodefile_path")"
-#
-#subliminal --addic7ed escapereality tessel --opensubtitles escape-reality tessel download -l nl -l en  -p addic7ed -p opensubtitles -p podnapisi -p shooter -p thesubdb -p tvsubtitles -r metadata -f "$sonarr_episodefile_path"
-
 /srv/scripts/sickbeard_mp4_automator/venv/bin/python /srv/scripts/sickbeard_mp4_automator/postSonarr.py 

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "$(date '+%d/%m/%y %H:%M:%S') | generate-label" >> /config/rtorrent/execute.log
-
 HASH="$1"
 TAGS="$2"
 
